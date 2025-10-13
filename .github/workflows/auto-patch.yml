@@ -1,6 +1,49 @@
 name: Update FOSSmaniac (auto-patch)
 
 on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * *"  # Ejecuta todos los días a las 6 AM UTC
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout your repo
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Clone upstream Unmanic
+        run: |
+          git clone --depth=1 https://github.com/Unmanic/unmanic.git unmanic-temp
+
+      - name: Replace files with patched versions
+        run: |
+          # Copiar código base desde el upstream
+          cp -r unmanic-temp/* ./
+          rm -rf unmanic-temp
+
+          # Reemplazar tus archivos personalizados
+          cp foss/foss.py unmanic/libs/session.py
+          cp foss/README.md ./README.md
+          cp foss/icon.png icon.png
+          cp foss/logo.png logo.png
+          cp foss/logo-white_font.png logo-white_font.png
+
+          # Confirmar reemplazo
+          ls -l unmanic/libs/session.py
+
+      - name: Commit and push changes
+        run: |
+          git config --global user.email "github-actions@github.com"
+          git config --global user.name "GitHub Actions"
+          git add .
+          git commit -m "Sync with upstream and apply FOSSmaniac patch" || echo "No changes to commit"
+          git push
+
+on:
   workflow_dispatch:  # permite ejecutarlo manualmente
   schedule:
     - cron: '0 3 * * *'  # opcional: corre todos los días a las 03:00 UTC
