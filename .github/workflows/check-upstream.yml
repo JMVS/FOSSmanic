@@ -56,23 +56,21 @@ jobs:
 
       - name: Save latest tag and create PR
         if: steps.compare.outputs.new_tag == 'true'
-        env:
-          PAT_PUSH: ${{ secrets.PAT_REPO_DISPATCH }}
         run: |
+          BRANCH_NAME="update-upstream-tag-$LATEST_TAG"
           git config --global user.email "github-actions@github.com"
           git config --global user.name "GitHub Actions"
 
-          # Crear un branch temporal
-          BRANCH_NAME="update-upstream-tag-$LATEST_TAG"
+          # Crear y cambiar a la rama con el tag
           git checkout -b $BRANCH_NAME
 
-          # Actualizar el archivo .last_upstream_tag
+          # Guardar el último tag
           echo "$LATEST_TAG" > .last_upstream_tag
           git add .last_upstream_tag
           git commit -m "Track upstream tag $LATEST_TAG"
 
-          # Push al branch temporal
-          git remote set-url origin https://JMVS:$PAT_PUSH@github.com/JMVS/FOSSmanic.git
+          # Configurar remote con tu PAT y hacer push
+          git remote set-url origin https://JMVS:${{ secrets.PAT_REPO_DISPATCH }}@github.com/JMVS/FOSSmanic.git
           git push -u origin $BRANCH_NAME
 
           # Crear PR automáticamente
