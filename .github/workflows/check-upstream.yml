@@ -70,8 +70,10 @@ jobs:
           git commit -m "Track upstream tag $LATEST_TAG"
 
           # Configurar remote con tu PAT y hacer push
-          git remote set-url origin https://JMVS:${{ secrets.PAT_REPO_DISPATCH }}@github.com/JMVS/FOSSmanic.git
-          git push -u origin $BRANCH_NAME
+          #git remote set-url origin https://JMVS:${{ secrets.PAT_REPO_DISPATCH }}@github.com/JMVS/FOSSmanic.git
+          #git push -u origin $BRANCH_NAME
+          git push https://x-access-token:${{ secrets.PAT_REPO_DISPATCH }}@github.com/JMVS/FOSSmanic.git HEAD:$BRANCH_NAME
+
 
           # Crear PR automáticamente
           curl -X POST -H "Authorization: token $PAT_PUSH" \
