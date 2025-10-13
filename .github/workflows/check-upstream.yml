@@ -62,4 +62,7 @@ jobs:
           git config --global user.name "GitHub Actions"
           git add .last_upstream_tag
           git commit -m "Track upstream tag $LATEST_TAG"
+          git remote set-url origin https://$PAT_PUSH@github.com/JMVS/FOSSmaniac.git
           git push
+        env:
+          PAT_PUSH: ${{ secrets.PAT_REPO_DISPATCH }}
