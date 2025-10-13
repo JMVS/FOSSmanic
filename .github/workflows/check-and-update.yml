@@ -281,9 +281,10 @@ jobs:
           echo "${{ steps.fetch.outputs.sha }}" > .upstream-sha
           
           # Actualizar README principal (no el de foss/)
-          if [ -f README.md ]; then
-            sed -i "s/Based on Unmanic commit: \`[^`]*\`/Based on Unmanic commit: \`${{ steps.fetch.outputs.short_sha }}\`/" README.md || true
-          fi
+          #if [ -f README.md ]; then
+            #sed -i "s/Based on Unmanic commit: \`[^`]*\`/Based on Unmanic commit: \`${{ steps.fetch.outputs.short_sha }}\`/" README.md || true
+          #fi
+          if [ -f README.md ]; then short_sha="${{ steps.fetch.outputs.short_sha }}" tmpf="$(mktemp)" awk -v sha="$short_sha" ' # If the line contains the marker, replace the ... part with the new short sha /Based on Unmanic commit:/ { sub(/[^]*/, "" sha "`") } { print } ' README.md > "$tmpf" && mv "$tmpf" README.md || true fi
           
           echo "✅ Metadata updated"
 
