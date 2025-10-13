@@ -1,82 +1,54 @@
-name: Check for new upstream tag
+name: Check Upstream Updates
 
 on:
   schedule:
-    - cron: "0 6 * * *"  # Todos los días a las 6 AM UTC
+    - cron: '0 */6 * * *'  # Cada 6 horas
   workflow_dispatch:
 
 jobs:
-  check-upstream:
+  check:
     runs-on: ubuntu-latest
-
+    outputs:
+      has_update: ${{ steps.compare.outputs.has_update }}
+      upstream_sha: ${{ steps.fetch.outputs.sha }}
+    
     steps:
-      - name: Fetch latest upstream tag
-        id: upstream
-        run: |
-          git clone --branch master --tags https://github.com/Unmanic/unmanic.git unmanic-temp
-          cd unmanic-temp
-          LATEST_TAG=$(git describe --tags $(git rev-list --tags --max-count=1))
-          echo "LATEST_TAG=$LATEST_TAG" >> $GITHUB_ENV
-          echo "Latest upstream tag: $LATEST_TAG"
-          cd ..
-          rm -rf unmanic-temp
-
-      - name: Checkout your repo
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Get last synced tag
-        id: local
+      - name: Fetch upstream commit
+        id: fetch
         run: |
-          LAST_TAG_FILE=".last_upstream_tag"
-          if [ -f "$LAST_TAG_FILE" ]; then
-            LAST_TAG=$(cat "$LAST_TAG_FILE")
-          else
-            LAST_TAG="none"
-          fi
-          echo "LAST_TAG=$LAST_TAG" >> $GITHUB_ENV
-          echo "Last synced tag: $LAST_TAG"
+          UPSTREAM_SHA=$(git ls-remote https://github.com/Unmanic/unmanic.git HEAD | awk '{print $1}')
+          echo "sha=$UPSTREAM_SHA" >> $GITHUB_OUTPUT
+          echo "Upstream SHA: $UPSTREAM_SHA"
 
-      - name: Compare tags
+      - name: Read current SHA
+        id: current
+        run: |
+          if [ -f .upstream-sha ]; then
+            CURRENT_SHA=$(cat .upstream-sha)
+          else
+            CURRENT_SHA="none"
+          fi
+          echo "sha=$CURRENT_SHA" >> $GITHUB_OUTPUT
+          echo "Current SHA: $CURRENT_SHA"
+
+      - name: Compare
         id: compare
         run: |
-          if [ "$LATEST_TAG" != "$LAST_TAG" ]; then
-            echo "new_tag=true" >> $GITHUB_OUTPUT
+          if [ "${{ steps.fetch.outputs.sha }}" != "${{ steps.current.outputs.sha }}" ]; then
+            echo "has_update=true" >> $GITHUB_OUTPUT
+            echo "✓ Update available"
           else
-            echo "new_tag=false" >> $GITHUB_OUTPUT
+            echo "has_update=false" >> $GITHUB_OUTPUT
+            echo "✓ Up to date"
           fi
 
-      - name: Trigger update workflow
-        if: steps.compare.outputs.new_tag == 'true'
-        uses: peter-evans/repository-dispatch@v4
-        with:
-          token: ${{ secrets.PAT_REPO_DISPATCH }}
-          repository: JMVS/FOSSmanic
-          event-type: trigger-upstream-update
-          client-payload: '{"ref": "${{ github.ref }}"}'
-
-      - name: Save latest tag and create PR
-        if: steps.compare.outputs.new_tag == 'true'
+      - name: Trigger update
+        if: steps.compare.outputs.has_update == 'true'
         run: |
-          BRANCH_NAME="update-upstream-tag-$LATEST_TAG"
-          git config --global user.email "github-actions@github.com"
-          git config --global user.name "GitHub Actions"
-
-          # Crear y cambiar a la rama con el tag
-          git checkout -b $BRANCH_NAME
-
-          # Guardar el último tag
-          echo "$LATEST_TAG" > .last_upstream_tag
-          git add .last_upstream_tag
-          git commit -m "Track upstream tag $LATEST_TAG"
-
-          # Configurar remote con tu PAT y hacer push
-          #git remote set-url origin https://JMVS:${{ secrets.PAT_REPO_DISPATCH }}@github.com/JMVS/FOSSmanic.git
-          #git push -u origin $BRANCH_NAME
-          git push https://x-access-token:${{ secrets.PAT_REPO_DISPATCH }}@github.com/JMVS/FOSSmanic.git HEAD:$BRANCH_NAME
-
-
-          # Crear PR automáticamente
-          curl -X POST -H "Authorization: token $PAT_PUSH" \
-               -H "Accept: application/vnd.github+json" \
-               https://api.github.com/repos/JMVS/FOSSmanic/pulls \
-               -d "{\"title\":\"Update upstream tag to $LATEST_TAG\",\"head\":\"$BRANCH_NAME\",\"base\":\"main\",\"body\":\"Automatic PR to update upstream tag\"}"
+          gh workflow run update-code.yml \
+            -f upstream_sha="${{ steps.fetch.outputs.sha }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
