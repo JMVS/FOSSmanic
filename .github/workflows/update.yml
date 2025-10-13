@@ -1,0 +1,43 @@
+name: Update from upstream
+
+on:
+  workflow_dispatch:
+  repository_dispatch:
+    types: [trigger-upstream-update]
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout your repo
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Clone upstream Unmanic
+        run: |
+          git clone --depth=1 https://github.com/Unmanic/unmanic.git unmanic-temp
+          cd unmanic-temp
+          LATEST_TAG=$(git describe --tags $(git rev-list --tags --max-count=1))
+          echo "LATEST_TAG=$LATEST_TAG" >> $GITHUB_ENV
+
+      - name: Copy upstream code and apply patch
+        run: |
+          cp -r unmanic-temp/* ./
+          rm -rf unmanic-temp
+
+          # Reemplazar archivos personalizados
+          cp foss/foss.py unmanic/libs/session.py
+          cp foss/README.md ./README.md
+          cp foss/icon.png icon.png
+          cp foss/logo.png logo.png
+          cp foss/logo-white_font.png logo-white_font.png
+
+      - name: Commit and push changes
+        run: |
+          git config --global user.email "github-actions@github.com"
+          git config --global user.name "GitHub Actions"
+          git add .
+          git commit -m "Sync with upstream tag $LATEST_TAG and apply FOSSmaniac patch" || echo "No changes to commit"
+          git push
