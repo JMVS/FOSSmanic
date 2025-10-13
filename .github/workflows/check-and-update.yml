@@ -193,27 +193,27 @@ jobs:
           if [ -f foss/icon.png ]; then
             cp foss/icon.png icon.png
                 echo "  ✅ icon.png"
-              done
           else
             echo "  ❌ ERROR: foss/icon.png not found"
+            ERRORS=$((ERRORS + 1))
           fi
           
           # 3. logo.png
           if [ -f foss/logo.png ]; then
             cp foss/logo.png logo.png
                 echo "  ✅ logo.png"
-              done
           else
             echo "  ❌ ERROR: foss/logo.png not found"
+            ERRORS=$((ERRORS + 1))
           fi
           
           # 4. logo-white_font.png
           if [ -f foss/logo-white_font.png ]; then
             cp foss/logo-white_font.png logo-white_font.png
                 echo "  ✅ logo-white_font.png"
-              done
           else
             echo "  ❌ ERROR: foss/logo-white_font.png not found"
+            ERRORS=$((ERRORS + 1))
           fi
           
           # 5. README.md (from foss/README.md to unmanic/README.md if exists)
