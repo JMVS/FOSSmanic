@@ -13,7 +13,7 @@ jobs:
       - name: Fetch latest upstream tag
         id: upstream
         run: |
-          git clone --depth=1 https://github.com/Unmanic/unmanic.git unmanic-temp
+          git clone --branch main --tags https://github.com/Unmanic/unmanic.git unmanic-temp
           cd unmanic-temp
           LATEST_TAG=$(git describe --tags $(git rev-list --tags --max-count=1))
           echo "LATEST_TAG=$LATEST_TAG" >> $GITHUB_ENV
