@@ -298,7 +298,7 @@ jobs:
       # ------------------------------------------------
 # STEP: Commit changes if any
 # ------------------------------------------------
-- name: Commit changes
+      - name: Commit changes
   if: steps.check.outputs.needs_update == 'true'
   id: commit
   run: |
@@ -313,8 +313,8 @@ jobs:
     else
       git commit -m "chore: update to upstream ${{ steps.fetch.outputs.short_sha }}
 
-- Merged upstream Unmanic commit ${{ steps.fetch.outputs.sha }}
-- Applied FOSS overwrites:
+      - Merged upstream Unmanic commit ${{ steps.fetch.outputs.sha }}
+      - Applied FOSS overwrites:
   * session.py (from foss.py)
   * icon.png
   * logo.png
