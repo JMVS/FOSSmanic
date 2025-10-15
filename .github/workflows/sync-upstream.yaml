@@ -1,53 +1,61 @@
-name: Sync and Patch Unmanic
+name: Sync Unmanic Repo
 
 on:
   schedule:
-    - cron: "0 9 * * 5"  # Viernes a las 09:00 UTC
-  workflow_dispatch:
+    - cron: '0 0 * * 5' # Runs every Friday at midnight UTC
+  workflow_dispatch: # Allows manual trigger
 
 jobs:
   sync:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout FOSSmanic repo
-      uses: actions/checkout@v4
-      with:
-        token: ${{ secrets.PAT_REPO_DISPATCH }}
-        ref: main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.PAT_REPO_DISPATCH }}
 
-      - name: Set variables
+      - name: Create temporary branch
         run: |
-          UPSTREAM_REPO="https://github.com/Unmanic/unmanic.git"
-          TEMP_BRANCH="temp-sync-$(date +%Y%m%d-%H%M%S)"
-          echo "UPSTREAM_REPO=$UPSTREAM_REPO" >> $GITHUB_ENV
-          echo "TEMP_BRANCH=$TEMP_BRANCH" >> $GITHUB_ENV
-
-      - name: Clone Unmanic upstream
+          git checkout -b temp-sync-branch
+          
+      - name: Clone Unmanic repo
         run: |
-          git clone --depth=1 $UPSTREAM_REPO upstream
-          cd upstream
-          git checkout -b $TEMP_BRANCH
-
-      - name: Copy custom FOSSmanic files
+          git clone https://github.com/Unmanic/unmanic.git temp-unmanic
+          
+      - name: Copy files to temp branch
         run: |
-          cp foss/foss.py upstream/unmanic/libs/session.py
-          cp foss/icon.png upstream/icon.png
-          cp foss/logo.png upstream/logo.png
-          cp foss/logo-white_font.png upstream/logo-white_font.png
-          cp foss/README.md upstream/README.md
-
-      - name: Commit and push patched code
+          cp foss/foss.py temp-unmanic/unmanic/libs/session.py
+          cp foss/icon.png temp-unmanic/icon.png
+          cp foss/logo.png temp-unmanic/logo.png
+          cp foss/logo-white_font.png temp-unmanic/logo-white_font.png
+          cp foss/README.md temp-unmanic/README.md
+          
+      - name: Commit changes to FOSSmanic
         run: |
-          cd upstream
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          cd temp-unmanic
+          git config user.name "GitHub Action"
+          git config user.email "action@github.com"
           git add .
-          git commit -m "chore: sync and patch Unmanic from FOSSmanic"
-          git push https://x-access-token:${{ secrets.PAT_REPO_DISPATCH }}@github.com/JMVS/FOSSmanic.git HEAD:main
-
-      - name: Cleanup
-        if: always()
+          git commit -m "Sync files from Unmanic repo"
+          git push origin temp-sync-branch
+          
+      - name: Create Pull Request to main
         run: |
-          cd upstream
-          git push origin --delete $TEMP_BRANCH || true
+          gh pr create --base main --head temp-sync-branch \
+            --title "Sync Unmanic changes" \
+            --body "Automated sync of Unmanic repo with FOSSmanic files"
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_REPO_DISPATCH }}
+
+      - name: Merge Pull Request
+        run: |
+          gh pr merge --auto --merge
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_REPO_DISPATCH }}
+
+      - name: Delete temporary branch
+        run: |
+          git push origin --delete temp-sync-branch
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_REPO_DISPATCH }}
