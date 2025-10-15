@@ -39,15 +39,11 @@ jobs:
       # 4. Prepara la carpeta temporal combinando Unmanic y tus parches.
       - name: '🛠️ Prepare temporary directory with patches'
         run: |
-          echo "-> Removing original Unmanic workflows..."
-          rm -rf ../unmanic_temp/.github/workflows/*
+          #echo "-> Removing original Unmanic workflows..."
+          #rm -rf ../unmanic_temp/.github/workflows/*
           
           echo "-> Applying patches from 'foss' branch..."
           rsync -av foss_patches/ ../unmanic_temp/
-
-          echo "-> Moving this workflow into its correct place..."
-          mkdir -p ../unmanic_temp/.github/workflows
-          mv ../unmanic_temp/sync-upstream.yaml ../unmanic_temp/.github/workflows/sync-upstream.yaml
 
       # 5. Sincroniza el resultado con la carpeta del checkout de 'main'.
       - name: '🔁 Synchronize content to `main` working directory'
