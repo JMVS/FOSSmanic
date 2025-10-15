@@ -1,0 +1,70 @@
+# Nombre del Workflow: Se mostrará en la pestaña "Actions" de GitHub.
+name: Sync with Unmanic Upstream
+
+# Disparadores (Triggers): ¿Cuándo se debe ejecutar esta acción?
+on:
+  # Permite ejecutarlo manualmente desde la interfaz de GitHub.
+  workflow_dispatch:
+
+  # Ejecución programada usando la sintaxis de cron.
+  schedule:
+    # Se ejecuta a las 03:00 UTC todos los viernes.
+    - cron: '0 3 * * 5'
+
+# Trabajos (Jobs): Define las tareas que se ejecutarán.
+jobs:
+  sync:
+    # El tipo de máquina virtual donde se ejecutará el trabajo.
+    runs-on: ubuntu-latest
+
+    # Pasos (Steps): La secuencia de acciones a realizar.
+    steps:
+      # 1. Descarga (checkout) tu repositorio FOSSmanic.
+      - name: '⬇️ Checkout FOSSmanic repository'
+        uses: actions/checkout@v4
+        with:
+          # Se usa el token de acceso personal (PAT) para tener permisos de escritura
+          # y poder subir los cambios de vuelta al repositorio.
+          token: ${{ secrets.PAT_REPO_DISPATCH }}
+
+      # 2. Clona el repositorio original de Unmanic en una carpeta temporal.
+      - name: '📥 Clone Unmanic repository'
+        run: git clone https://github.com/Unmanic/unmanic.git ../unmanic_temp
+
+      # 3. Sobrescribe los archivos del clon con tus versiones personalizadas.
+      - name: '🔄 Overwrite files with FOSSmanic versions'
+        run: |
+          echo "Applying FOSSmanic patches..."
+          cp -v foss/foss.py ../unmanic_temp/unmanic/libs/session.py
+          cp -v foss/icon.png ../unmanic_temp/icon.png
+          cp -v foss/logo.png ../unmanic_temp/logo.png
+          cp -v foss/logo-white_font.png ../unmanic_temp/logo-white_font.png
+          cp -v foss/README.md ../unmanic_temp/README.md
+
+      # 4. Sincroniza los archivos. Tu repo local se convertirá en un espejo del clon modificado.
+      - name: '🔁 Synchronize files to FOSSmanic repo'
+        # rsync actualiza, añade y elimina archivos según sea necesario.
+        # Se excluye la carpeta .git para no sobreescribir el historial de tu repositorio.
+        run: rsync -av --delete --exclude='.git/' ../unmanic_temp/ .
+
+      # 5. Configura Git, crea un commit y sube (push) los cambios si los hay.
+      - name: '⬆️ Commit and push changes'
+        run: |
+          # Configura el autor del commit como el bot de GitHub Actions.
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          
+          # Añade todos los cambios (nuevos, modificados, eliminados) al área de preparación (staging).
+          git add -A
+          
+          # Revisa si hay cambios para "commitear". Si no hay, termina el paso exitosamente.
+          if git diff --staged --quiet; then
+            echo "No changes to commit. Working tree clean."
+            exit 0
+          fi
+          
+          # Crea el commit.
+          git commit -m "chore(sync): Automatic sync with Unmanic upstream and patch application"
+          
+          # Sube los cambios a la rama 'main' de tu repositorio.
+          git push
