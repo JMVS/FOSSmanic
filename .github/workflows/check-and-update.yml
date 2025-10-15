@@ -70,17 +70,22 @@ jobs:
         if: steps.check.outputs.needs_update == 'true'
         id: branch
         run: |
-          BRANCH="update-${{ steps.fetch.outputs.short_sha }}-$(date +%Y%m%d-%H%M%S)"
+          # Crear nombre único con nanosegundos para evitar colisiones
+          TIMESTAMP=$(date +%Y%m%d-%H%M%S)-$(date +%N | cut -c1-3)
+          BRANCH="update-${{ steps.fetch.outputs.short_sha }}-${TIMESTAMP}"
           echo "name=$BRANCH" >> $GITHUB_OUTPUT
-          git fetch origin main
-          git checkout -B "$BRANCH" origin/main
+          echo "📝 Branch name: $BRANCH"
           
-          # Eliminar rama si existe
-          #git push origin --delete "$BRANCH" 2>/dev/null || true
-          git push -u origin --force --delete "$BRANCH" 2>/dev/null || true
+          # Eliminar rama local si existe (por si acaso)
+          git branch -D "$BRANCH" 2>/dev/null || true
           
+          # Eliminar rama remota si existe (por si acaso)
+          git push origin --delete "$BRANCH" 2>/dev/null || true
+          
+          # Crear nueva rama
           git checkout -b "$BRANCH"
-          echo "📝 Created branch: $BRANCH"
+          
+          echo "✅ Created branch: $BRANCH"
 
       - name: Clone upstream Unmanic
         if: steps.check.outputs.needs_update == 'true'
