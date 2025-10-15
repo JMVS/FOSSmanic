@@ -1,0 +1,76 @@
+# Nombre del Workflow
+name: Sync with Unmanic Upstream
+
+# Disparadores (Triggers)
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 3 * * 5' # 03:00 UTC todos los viernes
+
+# Trabajos (Jobs)
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    
+    # Previene que un workflow se cancele si se sube un nuevo commit mientras se ejecuta.
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
+
+    steps:
+      # 1. Descarga la rama 'main' (el destino final).
+      - name: '⬇️ Checkout FOSSmanic `main` branch'
+        uses: actions/checkout@v4
+        with:
+          ref: 'main'
+          token: ${{ secrets.PAT_REPO_DISPATCH }}
+
+      # 2. Descarga la rama 'foss' en una carpeta separada para usarla como parche.
+      - name: '📂 Checkout `foss` branch for patch files'
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}
+          ref: 'foss'
+          path: 'foss_patches'
+
+      # 3. Clona el repositorio original de Unmanic a una carpeta temporal.
+      - name: '📥 Clone Unmanic repository'
+        run: git clone https://github.com/Unmanic/unmanic.git unmanic_temp
+
+      # 4. Prepara la carpeta temporal combinando Unmanic y tus parches.
+      - name: '🛠️ Prepare temporary directory with patches'
+        run: |
+          echo "-> Removing original Unmanic workflows..."
+          rm -rf unmanic_temp/.github/workflows/*
+          
+          echo "-> Applying patches from 'foss' branch..."
+          # Copia y sobrescribe todos los archivos de la rama 'foss' en el clon temporal.
+          rsync -av foss_patches/ unmanic_temp/
+
+          echo "-> Moving this workflow into its correct place..."
+          # Asegura que la carpeta de destino exista.
+          mkdir -p unmanic_temp/.github/workflows
+          # Mueve el workflow desde la raíz (donde lo copió rsync) a su destino final.
+          mv unmanic_temp/sync-upstream.yaml unmanic_temp/.github/workflows/sync-upstream.yaml
+
+      # 5. Sincroniza el resultado con la carpeta del checkout de 'main'.
+      - name: '🔁 Synchronize content to `main` working directory'
+        # ¡IMPORTANTE! Se excluye la carpeta .github para no borrar el workflow en ejecución.
+        run: rsync -av --delete --exclude='.git/' --exclude='.github/' unmanic_temp/ .
+
+      # 6. Sube los cambios a la rama 'main' si hay diferencias.
+      - name: '⬆️ Commit and push changes'
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          
+          git add -A
+          
+          if git diff --staged --quiet; then
+            echo "No changes to commit. Working tree clean."
+            exit 0
+          fi
+          
+          git commit -m "chore(sync): Automatic sync with Unmanic upstream and patch application"
+          
+          git push
