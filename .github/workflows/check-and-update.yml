@@ -335,7 +335,7 @@ jobs:
         run: |
           echo "📤 Pushing to origin..."
           git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
-          git push -u origin ${{ steps.branch.outputs.name }}
+          git push -u origin ${{ steps.branch.outputs.name }} --force
           echo "✅ Branch pushed"
 
       - name: Create Pull Request
