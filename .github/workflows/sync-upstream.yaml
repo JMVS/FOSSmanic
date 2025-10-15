@@ -12,7 +12,6 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     
-    # Previene que un workflow se cancele si se sube un nuevo commit mientras se ejecuta.
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}
       cancel-in-progress: true
@@ -33,30 +32,28 @@ jobs:
           ref: 'foss'
           path: 'foss_patches'
 
-      # 3. Clona el repositorio original de Unmanic a una carpeta temporal.
+      # 3. Clona el repositorio original de Unmanic FUERA del directorio actual.
       - name: '📥 Clone Unmanic repository'
-        run: git clone https://github.com/Unmanic/unmanic.git unmanic_temp
+        # La clave es clonar en ../unmanic_temp para que esté fuera del destino.
+        run: git clone https://github.com/Unmanic/unmanic.git ../unmanic_temp
 
       # 4. Prepara la carpeta temporal combinando Unmanic y tus parches.
       - name: '🛠️ Prepare temporary directory with patches'
         run: |
           echo "-> Removing original Unmanic workflows..."
-          rm -rf unmanic_temp/.github/workflows/*
+          rm -rf ../unmanic_temp/.github/workflows/*
           
           echo "-> Applying patches from 'foss' branch..."
-          # Copia y sobrescribe todos los archivos de la rama 'foss' en el clon temporal.
-          rsync -av foss_patches/ unmanic_temp/
+          rsync -av foss_patches/ ../unmanic_temp/
 
           echo "-> Moving this workflow into its correct place..."
-          # Asegura que la carpeta de destino exista.
-          mkdir -p unmanic_temp/.github/workflows
-          # Mueve el workflow desde la raíz (donde lo copió rsync) a su destino final.
-          mv unmanic_temp/sync-upstream.yaml unmanic_temp/.github/workflows/sync-upstream.yaml
+          mkdir -p ../unmanic_temp/.github/workflows
+          mv ../unmanic_temp/sync-upstream.yaml ../unmanic_temp/.github/workflows/sync-upstream.yaml
 
       # 5. Sincroniza el resultado con la carpeta del checkout de 'main'.
       - name: '🔁 Synchronize content to `main` working directory'
-        # ¡IMPORTANTE! Se excluye la carpeta .github para no borrar el workflow en ejecución.
-        run: rsync -av --delete --exclude='.git/' --exclude='.github/' unmanic_temp/ .
+        # Ahora el origen (../unmanic_temp/) y el destino (.) están separados.
+        run: rsync -av --delete --exclude='.git/' --exclude='.github/' ../unmanic_temp/ .
 
       # 6. Sube los cambios a la rama 'main' si hay diferencias.
       - name: '⬆️ Commit and push changes'
