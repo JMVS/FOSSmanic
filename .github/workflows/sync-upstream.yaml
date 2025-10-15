@@ -34,7 +34,6 @@ jobs:
 
       # 3. Clona el repositorio original de Unmanic FUERA del directorio actual.
       - name: '📥 Clone Unmanic repository'
-        # La clave es clonar en ../unmanic_temp para que esté fuera del destino.
         run: git clone https://github.com/Unmanic/unmanic.git ../unmanic_temp
 
       # 4. Prepara la carpeta temporal combinando Unmanic y tus parches.
@@ -52,10 +51,13 @@ jobs:
 
       # 5. Sincroniza el resultado con la carpeta del checkout de 'main'.
       - name: '🔁 Synchronize content to `main` working directory'
-        # Ahora el origen (../unmanic_temp/) y el destino (.) están separados.
         run: rsync -av --delete --exclude='.git/' --exclude='.github/' ../unmanic_temp/ .
 
-      # 6. Sube los cambios a la rama 'main' si hay diferencias.
+      # 6. ¡NUEVO PASO! Limpia la carpeta de parches que ya no se necesita.
+      - name: '🧹 Clean up patch directory'
+        run: rm -rf foss_patches
+
+      # 7. Sube los cambios a la rama 'main' si hay diferencias.
       - name: '⬆️ Commit and push changes'
         run: |
           git config --global user.name 'github-actions[bot]'
