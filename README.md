@@ -15,70 +15,21 @@ FOSSmanic - Libre Library Optimiser
 [![Docker Pulls](https://img.shields.io/docker/pulls/josh5/unmanic?color=009dc7&logo=docker&logoColor=%23403d3d&style=for-the-badge)](https://hub.docker.com/r/josh5/unmanic)
 [![Docker Image Size (tag)](https://img.shields.io/docker/image-size/josh5/unmanic/latest?color=009dc7&label=docker%20image%20size&logo=docker&logoColor=%23403d3d&style=for-the-badge)](https://hub.docker.com/r/josh5/unmanic)
 
-
-
-
-[![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/Unmanic/unmanic/python_lint_and_run_unit_tests.yml?branch=master&style=flat-square&logo=github&logoColor=403d3d&label=Unit%20Tests)](https://github.com/Unmanic/unmanic/actions/workflows/python_lint_and_run_unit_tests.yml?query=branch%3Amaster)
-[![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/Unmanic/unmanic/integration_test_and_build_all_packages_ci.yml?branch=master&style=flat-square&logo=github&logoColor=403d3d&label=Package%20Build)](https://github.com/Unmanic/unmanic/actions/workflows/integration_test_and_build_all_packages_ci.yml?query=branch%3Amaster)
+[![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/JMVS/FOSSmanic/sync-upstream.yaml?branch=main&style=flat-square&logo=github&logoColor=403d3d&label=FOSS%20Patching)](https://github.com/JMVS/FOSSmanic/actions/workflows/sync-upstream.yaml?query=branch%3Amain)
 
 [![GitHub license](https://img.shields.io/github/license/JMVS/FOSSmanic?color=009dc7&style=flat-square)]()
 ---
 
-FOSSmanic is a Unmanic-based simple tool for optimising your file library without imposed limitations. You can use it to convert your files into a single, uniform format, manage file movements based on timestamps, or execute custom commands against a file based on its file size.
+FOSSmanic is an Unmanic-based simple tool for optimising your file library without imposed limitations. You can use it to convert your files into a single, uniform format, manage file movements based on timestamps, or execute custom commands against a file based on its file size.
 
 Simply configure FOSSmanic pointing it at your library and let it automatically manage that library for you.
 
 FOSSmanic provides you with all the Unmanic functionality without any limitation.
 
-### Table Of Contents
+Learn more at the [original project](https://github.com/Unmanic/unmanic)
 
-[Dependencies](#dependencies)
-
-[Screen-shots](#screen-shots)
-  * [Dashboard](#dashboard)
-  * [File metrics](#file-metrics)
-  * [Installed plugins](#installed-plugins)
-
-[Install and Run](#install-and-run)
-
-[License and Contribution](#license-and-contribution)
-
-
-## Dependencies
-
- - Python 3.x ([Install](https://www.python.org/downloads/))
- - To install requirements run 'python3 -m pip install -r requirements.txt' from the project root
-
-Since FOSSmanic can be used for running any commands, you will need to ensure that the required dependencies for those commands are also installed on your system.
-
-## Screen-shots
-
-#### Dashboard:
-![Screen-shot - Dashboard](./docs/images/unmanic-dashboard-processing-anime.png)
-#### File metrics:
-![Screen-shot - Desktop](./docs/images/unmanic-file-size-data-panel-anime.png)
-#### Installed plugins:
-![Screen-shot - Desktop](./docs/images/unmanic-list-installed-plugins.png)
-
-## Install and Run
-
-For up-to-date installation instructions, follow the [Unmanic documentation](https://docs.unmanic.app/docs/).
-
-To run from source:
-
-1) Install the Python dependencies listed above then run:
-2) Run:
-    ```
-    # Ensure the submodules are checked out
-    git submodule update --init --recursive
-    
-    # Build and install the project into your home directory
-    python3 ./setup.py install --user
-    
-    # Run Unmanic
-    unmanic
-    ```
-3) Open your web browser and navigate to http://localhost:8888/
+## TODO
+- Adapt docker
 
 ## License and Contribution
 
