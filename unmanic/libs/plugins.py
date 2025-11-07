@@ -34,6 +34,8 @@ import hashlib
 import json
 import os
 import shutil
+import subprocess
+import sys
 import zipfile
 from operator import attrgetter
 
@@ -41,6 +43,7 @@ import requests
 
 from unmanic import config
 from unmanic.libs import common
+from unmanic.libs.frontend_push_messages import FrontendPushMessages
 from unmanic.libs.library import Library
 from unmanic.libs.logs import UnmanicLogging
 from unmanic.libs.session import Session
@@ -478,8 +481,44 @@ class PluginsHandler(object, metaclass=SingletonType):
         self.logger.debug("Extracting plugin to '{}'".format(plugin_directory))
         with zipfile.ZipFile(zip_file, "r") as zip_ref:
             zip_ref.extractall(str(plugin_directory))
+        # Read plugin info
+        plugin_info = self.get_plugin_info(plugin_id)
+        # Run through any required dependency installation
+        post_install_python_requirements = os.path.join(str(plugin_directory), 'requirements.post-install.txt')
+        if os.path.exists(post_install_python_requirements):
+            self.install_plugin_requirements(plugin_directory, requirements_file=post_install_python_requirements)
+        if plugin_info.get('defer_dependency_install', False):
+            self.install_plugin_requirements(plugin_directory)
+            self.install_npm_modules(plugin_directory)
         # Return installed plugin info
-        return self.get_plugin_info(plugin_id)
+        return plugin_info
+
+    @staticmethod
+    def install_plugin_requirements(plugin_path, requirements_file=None):
+        if requirements_file is None:
+            requirements_file = os.path.join(plugin_path, 'requirements.txt')
+        install_target = os.path.join(plugin_path, 'site-packages')
+        # Check if the requirements file exists
+        if not os.path.exists(requirements_file):
+            return
+        # First, remove the existing site-packages directory if it exists to ensure a clean installation
+        if os.path.exists(install_target):
+            shutil.rmtree(install_target)
+        # Recreate the site-packages directory
+        os.makedirs(install_target, exist_ok=True)
+        subprocess.call([
+            sys.executable, '-m', 'pip', 'install', '--upgrade',
+            '-r', requirements_file,
+            '--target={}'.format(install_target)
+        ])
+
+    @staticmethod
+    def install_npm_modules(plugin_path):
+        package_file = os.path.join(plugin_path, 'package.json')
+        if not os.path.exists(package_file):
+            return
+        subprocess.call(['npm', 'install'], cwd=plugin_path)
+        subprocess.call(['npm', 'run', 'build'], cwd=plugin_path)
 
     @staticmethod
     def write_plugin_data_to_db(plugin, plugin_directory):
@@ -760,19 +799,20 @@ class PluginsHandler(object, metaclass=SingletonType):
         """
         Ensure that the currently installed plugins are compatible with this PluginsHandler version
 
-        :param frontend_messages:
         :return:
         :rtype:
         """
+        if frontend_messages is None:
+            frontend_messages = FrontendPushMessages()
         # Fetch all libraries
         all_libraries = Library.get_all_libraries()
 
         def add_frontend_message(plugin_id, name):
             # If the frontend messages queue was included in request, append a message
             if frontend_messages:
-                frontend_messages.put(
+                frontend_messages.add(
                     {
-                        'id':      'incompatiblePlugin_{}'.format(plugin_id),
+                        'id':      f'incompatiblePlugin_{plugin_id}',
                         'type':    'error',
                         'code':    'incompatiblePlugin',
                         'message': name,

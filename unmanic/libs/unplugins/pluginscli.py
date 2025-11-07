@@ -34,8 +34,6 @@ import logging
 import os
 import re
 import shutil
-import subprocess
-import sys
 
 import inquirer
 import requests
@@ -122,32 +120,6 @@ def print_table(table_data, col_list=None, sep='\uFFFA', max_col_width=9):
         item = [i[1] if len(i) > 1 else '' for i in row]
 
 
-def install_npm_modules(plugin_path):
-    package_file = os.path.join(plugin_path, 'package.json')
-    if not os.path.exists(package_file):
-        return
-    subprocess.call(['npm', 'install'], cwd=plugin_path)
-    subprocess.call(['npm', 'run', 'build'], cwd=plugin_path)
-
-
-def install_plugin_requirements(plugin_path):
-    requirements_file = os.path.join(plugin_path, 'requirements.txt')
-    install_target = os.path.join(plugin_path, 'site-packages')
-    # Check if the requirements file exists
-    if not os.path.exists(requirements_file):
-        return
-    # First, remove the existing site-packages directory if it exists to ensure a clean installation
-    if os.path.exists(install_target):
-        shutil.rmtree(install_target)
-    # Recreate the site-packages directory
-    os.makedirs(install_target, exist_ok=True)
-    subprocess.call([
-        sys.executable, '-m', 'pip', 'install', '--upgrade',
-        '-r', requirements_file,
-        '--target={}'.format(install_target)
-    ])
-
-
 class PluginsCLI(object):
 
     def __init__(self, plugins_directory=None):
@@ -202,7 +174,7 @@ class PluginsCLI(object):
 
         # Generate menu menu
         print()
-        print('INFO: https://docs.unmanic.app/docs/plugins/writing_plugins/plugin_runner_types')
+        print('INFO: https://docs.unmanic.app/docs/development/writing_plugins/plugin_runner_types')
         plugin_runners_inquirer = inquirer.List(
             'selected_plugin',
             message="Which Plugin runner will be used?",
@@ -329,8 +301,8 @@ class PluginsCLI(object):
                 print("Exception while saving plugin info to DB. - {}".format(str(e)))
                 return
 
-            install_plugin_requirements(plugin_path)
-            install_npm_modules(plugin_path)
+            PluginsHandler.install_plugin_requirements(plugin_path)
+            PluginsHandler.install_npm_modules(plugin_path)
             print()
         print()
 
@@ -404,6 +376,19 @@ class PluginsCLI(object):
             # Reload the plugin
             plugin_executor.reload_plugin_module(plugin_id)
 
+            # Test Plugin settings
+            print("  {0}Testing settings{1}".format(BColours.SUBHEADER, BColours.ENDC))
+            errors, plugin_settings = plugin_executor.test_plugin_settings(plugin_id)
+            print("    {}Plugin settings schema{}".format(BColours.SECTION, BColours.ENDC))
+            if errors:
+                for error in errors:
+                    print("        -- {1}FAILED: {0}{2}".format(error, BColours.FAIL, BColours.ENDC))
+            else:
+                formatted_plugin_settings = json.dumps(plugin_settings, indent=1)
+                formatted_plugin_settings = formatted_plugin_settings.replace('\n', '\n' + '                    ')
+                print("        - {1}Settings: {0}{2}".format(formatted_plugin_settings, BColours.RESULTS, BColours.ENDC))
+                print("        -- {}PASSED{} --".format(BColours.OKGREEN, BColours.ENDC))
+
             # Test Plugin runners
             print("  {0}Testing runners{1}".format(BColours.SUBHEADER, BColours.ENDC))
             plugin_types_in_plugin = plugin_executor.get_all_plugin_types_in_plugin(plugin_id)
@@ -422,19 +407,6 @@ class PluginsCLI(object):
                     else:
                         print("        -- {}PASSED{} --".format(BColours.OKGREEN, BColours.ENDC))
                     print()
-
-            # Test Plugin settings
-            print("  {0}Testing settings{1}".format(BColours.SUBHEADER, BColours.ENDC))
-            errors, plugin_settings = plugin_executor.test_plugin_settings(plugin_id)
-            print("    {}Plugin settings schema{}".format(BColours.SECTION, BColours.ENDC))
-            if errors:
-                for error in errors:
-                    print("        -- {1}FAILED: {0}{2}".format(error, BColours.FAIL, BColours.ENDC))
-            else:
-                formatted_plugin_settings = json.dumps(plugin_settings, indent=1)
-                formatted_plugin_settings = formatted_plugin_settings.replace('\n', '\n' + '                    ')
-                print("        - {1}Settings: {0}{2}".format(formatted_plugin_settings, BColours.RESULTS, BColours.ENDC))
-                print("        -- {}PASSED{} --".format(BColours.OKGREEN, BColours.ENDC))
             print()
             print()
 
